@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Stall board</title><style>
+:root { --bg:#f4f5f7; --card:#fff; --ink:#1c2330; --muted:#667085; --line:#d9dde4;
+        --alert:#c0362c; --warn:#b7791f; --ok:#2f7d4f; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#14181f; --card:#1e242e; --ink:#e6e9ef; --muted:#98a2b3; --line:#323a47;
+          --alert:#ef6b61; --warn:#e0a94a; --ok:#5fbf86; }
+}
+* { box-sizing: border-box; }
+body { margin:0; padding:24px 16px; background:var(--bg); color:var(--ink);
+       font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+h1 { margin:0 0 4px; font-size:22px; }
+h2 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+     color:var(--muted); }
+.meta { color:var(--muted); margin:0 0 16px; }
+.stats { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 20px; padding:0; list-style:none; }
+.stats li { background:var(--card); border:1px solid var(--line); border-radius:8px;
+            padding:8px 12px; }
+.stats b { font-size:18px; display:block; }
+.attention { background:var(--card); border:1px solid var(--line); border-radius:8px;
+             padding:14px 16px; margin-bottom:20px; }
+.attention ul { margin:0; padding-left:18px; }
+.board { display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
+.col { min-width:0; }
+.card { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--line);
+        border-radius:8px; padding:10px 12px; margin-bottom:10px; overflow-wrap:anywhere; }
+.card.alert { border-left-color:var(--alert); }
+.card.warn { border-left-color:var(--warn); }
+.card.ok { border-left-color:var(--ok); }
+.card .id { color:var(--muted); font-size:12px; }
+.card .title { font-weight:600; margin:2px 0 6px; }
+.card .row { color:var(--muted); font-size:12px; }
+.badge { display:inline-block; font-size:11px; font-weight:700; border-radius:4px;
+         padding:1px 6px; margin-right:4px; color:#fff; }
+.badge.alert { background:var(--alert); }
+.badge.warn { background:var(--warn); }
+.reason { margin-top:6px; font-size:12px; }
+.empty { color:var(--muted); font-style:italic; }
+</style></head><body>
+<h1>Stall board</h1>
+<p class="meta">Scanned 2026-01-15 13:00 UTC. 14 tasks, 7 flagged. Static snapshot: rerun the scan to refresh.</p>
+<ul class="stats"><li><b>3</b>Queued</li><li><b>5</b>In progress</li><li><b>2</b>Blocked</li><li><b>2</b>Waiting on a human</li><li><b>2</b>Done</li><li><b>2</b>Alerts</li><li><b>5</b>Warnings</li></ul>
+<section class="attention"><h2>Needs attention</h2><ul><li><span class="badge alert">alert</span><b>T-109</b> Import supplier price sheet (agent-quotes): blocked for 2d 5h: file arrived as a scanned image</li><li><span class="badge alert">alert</span><b>T-107</b> Confirm scope change before sending revised quote (agent-quotes): waiting on ops lead for 8h</li><li><span class="badge warn">warn</span><b>T-111</b> Clean duplicate contacts in the CRM ((unowned)): queued for 2d 23h with no owner</li><li><span class="badge warn">warn</span><b>T-112</b> Follow up on unanswered quote (Sample Customer D) (agent-outreach): queued for 31h, never started</li><li><span class="badge warn">warn</span><b>T-103</b> Reconcile last week&#x27;s card receipts (agent-ledger): in progress but no move for 10h</li><li><span class="badge warn">warn</span><b>T-108</b> Sync calendar holds to the job tracker (agent-scheduler): blocked for 4h: tracker API returning 503</li><li><span class="badge warn">warn</span><b>T-105</b> Reschedule Thursday crew after cancellation (agent-scheduler): waiting on field supervisor for 2h</li></ul></section>
+<main class="board"><section class="col" data-state="queued"><h2>Queued (3)</h2><div class="card warn" data-task="T-111"><div class="id">T-111</div><div class="title">Clean duplicate contacts in the CRM</div><div class="row">Owner: (unowned)</div><div class="row">Last moved: 2d 23h ago</div><div class="row">Note: nobody picked this up</div><div class="reason"><span class="badge warn">idle</span>queued for 2d 23h with no owner</div></div><div class="card warn" data-task="T-112"><div class="id">T-112</div><div class="title">Follow up on unanswered quote (Sample Customer D)</div><div class="row">Owner: agent-outreach</div><div class="row">Last moved: 31h ago</div><div class="reason"><span class="badge warn">idle</span>queued for 31h, never started</div></div><div class="card ok" data-task="T-110"><div class="id">T-110</div><div class="title">Draft weekly numbers summary</div><div class="row">Owner: agent-ledger</div><div class="row">Last moved: 6h ago</div></div></section><section class="col" data-state="in_progress"><h2>In progress (5)</h2><div class="card warn" data-task="T-103"><div class="id">T-103</div><div class="title">Reconcile last week&#x27;s card receipts</div><div class="row">Owner: agent-ledger</div><div class="row">Last moved: 10h ago</div><div class="row">Note: stopped after batch 3 of 7</div><div class="reason"><span class="badge warn">idle</span>in progress but no move for 10h</div></div><div class="card ok" data-task="T-102"><div class="id">T-102</div><div class="title">Build quote for deck repair (Sample Customer B)</div><div class="row">Owner: agent-quotes</div><div class="row">Last moved: 3h ago</div><div class="row">Note: pricing materials</div></div><div class="card ok" data-task="T-101"><div class="id">T-101</div><div class="title">Reply to new lead from web form (Sample Customer A)</div><div class="row">Owner: agent-intake</div><div class="row">Last moved: 1h ago</div><div class="row">Note: drafting first reply</div></div><div class="card ok" data-task="T-104"><div class="id">T-104</div><div class="title">Send review request batch for closed jobs</div><div class="row">Owner: agent-outreach</div><div class="row">Last moved: 0m ago</div><div class="row">Note: resumed at batch 4</div></div><div class="card ok" data-task="T-106"><div class="id">T-106</div><div class="title">Approve refund above the auto limit (Sample Customer C)</div><div class="row">Owner: agent-ledger</div><div class="row">Last moved: 0m ago</div><div class="row">Note: refund approved</div></div></section><section class="col" data-state="blocked"><h2>Blocked (2)</h2><div class="card alert" data-task="T-109"><div class="id">T-109</div><div class="title">Import supplier price sheet</div><div class="row">Owner: agent-quotes</div><div class="row">Last moved: 2d 5h ago</div><div class="row">Note: needs a readable copy</div><div class="reason"><span class="badge alert">blocked</span>blocked for 2d 5h: file arrived as a scanned image</div></div><div class="card warn" data-task="T-108"><div class="id">T-108</div><div class="title">Sync calendar holds to the job tracker</div><div class="row">Owner: agent-scheduler</div><div class="row">Last moved: 4h ago</div><div class="row">Note: retry scheduled</div><div class="reason"><span class="badge warn">blocked</span>blocked for 4h: tracker API returning 503</div></div></section><section class="col" data-state="waiting_human"><h2>Waiting on a human (2)</h2><div class="card alert" data-task="T-107"><div class="id">T-107</div><div class="title">Confirm scope change before sending revised quote</div><div class="row">Owner: agent-quotes</div><div class="row">Last moved: 8h ago</div><div class="row">Note: customer asked to add a second room</div><div class="reason"><span class="badge alert">waiting human</span>waiting on ops lead for 8h</div></div><div class="card warn" data-task="T-105"><div class="id">T-105</div><div class="title">Reschedule Thursday crew after cancellation</div><div class="row">Owner: agent-scheduler</div><div class="row">Last moved: 2h ago</div><div class="row">Note: two slot options offered</div><div class="reason"><span class="badge warn">waiting human</span>waiting on field supervisor for 2h</div></div></section><section class="col" data-state="done"><h2>Done (2)</h2><div class="card " data-task="T-114"><div class="id">T-114</div><div class="title">Send appointment reminders for tomorrow</div><div class="row">Owner: agent-scheduler</div><div class="row">Last moved: 21h ago</div><div class="row">Note: 9 reminders sent</div></div><div class="card " data-task="T-113"><div class="id">T-113</div><div class="title">Post job photos to the shared album</div><div class="row">Owner: agent-outreach</div><div class="row">Last moved: 5h ago</div><div class="row">Note: 12 photos posted</div></div></section></main>
+</body></html>

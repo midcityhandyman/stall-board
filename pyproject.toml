@@ -1,0 +1,14 @@
+[project]
+name = "stall-board"
+version = "0.1.0"
+description = "Work in flight board for a fleet of agents: flags idle, blocked and waiting on a human."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+stall-board = "stall_board.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

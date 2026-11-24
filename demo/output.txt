@@ -1,0 +1,83 @@
+stall-board demo (all data is fake, clock pinned, no network)
+
+=== 1. Load 14 fake tasks
+$ python -m stall_board --now 2026-01-15T12:00:00Z seed
+Seeded 14 fake tasks.
+
+=== 2. Everything on the board, oldest move first
+$ python -m stall_board --now 2026-01-15T12:00:00Z list
+T-111  queued         (unowned)         2d 22h  Clean duplicate contacts in the CRM
+T-109  blocked        agent-quotes       2d 4h  Import supplier price sheet
+T-104  in_progress    agent-outreach       31h  Send review request batch for closed jobs
+T-112  queued         agent-outreach       30h  Follow up on unanswered quote (Sample Customer D)
+T-106  waiting_human  agent-ledger         26h  Approve refund above the auto limit (Sample Customer C)
+T-114  done           agent-scheduler      20h  Send appointment reminders for tomorrow
+T-103  in_progress    agent-ledger          9h  Reconcile last week's card receipts
+T-107  waiting_human  agent-quotes          7h  Confirm scope change before sending revised quote
+T-110  queued         agent-ledger          5h  Draft weekly numbers summary
+T-113  done           agent-outreach        4h  Post job photos to the shared album
+T-108  blocked        agent-scheduler       3h  Sync calendar holds to the job tracker
+T-102  in_progress    agent-quotes          2h  Build quote for deck repair (Sample Customer B)
+T-105  waiting_human  agent-scheduler       1h  Reschedule Thursday crew after cancellation
+T-101  in_progress    agent-intake         30m  Reply to new lead from web form (Sample Customer A)
+
+=== 3. Scan: who is idle, blocked or waiting on a human?
+$ python -m stall_board --now 2026-01-15T12:00:00Z scan --fail-on alert
+STALL BOARD  2026-01-15 12:00 UTC
+14 tasks: 3 queued, 4 in_progress, 2 blocked, 3 waiting_human, 2 done
+Flagged: 9 (4 alert, 5 warn)
+
+WAITING ON A HUMAN (3)
+  [ALERT] T-106  Approve refund above the auto limit (Sample... agent-ledger     waiting on bookkeeper for 26h
+  [ALERT] T-107  Confirm scope change before sending revised... agent-quotes     waiting on ops lead for 7h
+  [WARN ] T-105  Reschedule Thursday crew after cancellation    agent-scheduler  waiting on field supervisor for 1h
+
+BLOCKED (2)
+  [ALERT] T-109  Import supplier price sheet                    agent-quotes     blocked for 2d 4h: file arrived as a scanned image
+  [WARN ] T-108  Sync calendar holds to the job tracker         agent-scheduler  blocked for 3h: tracker API returning 503
+
+IDLE (4)
+  [ALERT] T-104  Send review request batch for closed jobs      agent-outreach   in progress but no move for 31h
+  [WARN ] T-111  Clean duplicate contacts in the CRM            (unowned)        queued for 2d 22h with no owner
+  [WARN ] T-112  Follow up on unanswered quote (Sample Custo... agent-outreach   queued for 30h, never started
+  [WARN ] T-103  Reconcile last week's card receipts            agent-ledger     in progress but no move for 9h
+
+Flagged by owner: agent-ledger 2, agent-outreach 2, agent-quotes 2, agent-scheduler 2, (unowned) 1
+Moving fine: 3 of 12 open tasks
+(exit code 1: alerts exist, so a cron wrapper would notify)
+
+=== 4. One hour later: the bookkeeper approves the refund
+$ python -m stall_board --now 2026-01-15T13:00:00Z move T-106 in_progress --note "refund approved"
+Moved T-106: waiting_human -> in_progress
+
+=== 5. The stalled review batch sends a heartbeat
+$ python -m stall_board --now 2026-01-15T13:00:00Z move T-104 in_progress --note "resumed at batch 4"
+Moved T-104: in_progress -> in_progress
+
+=== 6. Scan again: both flags are gone, the rest aged by an hour
+$ python -m stall_board --now 2026-01-15T13:00:00Z scan
+STALL BOARD  2026-01-15 13:00 UTC
+14 tasks: 3 queued, 5 in_progress, 2 blocked, 2 waiting_human, 2 done
+Flagged: 7 (2 alert, 5 warn)
+
+WAITING ON A HUMAN (2)
+  [ALERT] T-107  Confirm scope change before sending revised... agent-quotes     waiting on ops lead for 8h
+  [WARN ] T-105  Reschedule Thursday crew after cancellation    agent-scheduler  waiting on field supervisor for 2h
+
+BLOCKED (2)
+  [ALERT] T-109  Import supplier price sheet                    agent-quotes     blocked for 2d 5h: file arrived as a scanned image
+  [WARN ] T-108  Sync calendar holds to the job tracker         agent-scheduler  blocked for 4h: tracker API returning 503
+
+IDLE (3)
+  [WARN ] T-111  Clean duplicate contacts in the CRM            (unowned)        queued for 2d 23h with no owner
+  [WARN ] T-112  Follow up on unanswered quote (Sample Custo... agent-outreach   queued for 31h, never started
+  [WARN ] T-103  Reconcile last week's card receipts            agent-ledger     in progress but no move for 10h
+
+Flagged by owner: agent-quotes 2, agent-scheduler 2, (unowned) 1, agent-ledger 1, agent-outreach 1
+Moving fine: 5 of 12 open tasks
+
+=== 7. Write the static HTML board
+$ python -m stall_board --now 2026-01-15T13:00:00Z board --out demo/board.html
+Wrote demo/board.html (14 tasks, 7 flagged)
+
+Done. Open demo/board.html in a browser.
