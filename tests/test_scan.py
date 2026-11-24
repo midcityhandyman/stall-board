@@ -134,3 +134,28 @@ def test_seeding_twice_replaces_rather_than_duplicates(board, now):
     seed(board, now)
     seed(board, now)
     assert len(board.list_tasks()) == 14
+
+
+@pytest.mark.parametrize("state,flag", [("waiting_human", "waiting_human"),
+                                        ("blocked", "blocked")])
+def test_heartbeat_does_not_reset_time_parked(board, now, state, flag):
+    start = now - timedelta(hours=30)
+    board.add_task("T-1", "Parked", state=state, waiting_on="ops lead", now=start)
+    board.move_task("T-1", state, now=now - timedelta(minutes=5))   # agent checks in
+    finding = scan(board.list_tasks(), now).finding_for("T-1")
+    assert (finding.flag, finding.severity) == (flag, "alert")
+    assert finding.age_hours == 30
+    assert "for 30h" in finding.reason
+
+
+def test_heartbeat_still_clears_idle(board, now):
+    board.add_task("T-1", "Working", state="in_progress", now=now - timedelta(hours=30))
+    assert scan(board.list_tasks(), now).finding_for("T-1").severity == "alert"
+    board.move_task("T-1", "in_progress", now=now)
+    assert scan(board.list_tasks(), now).finding_for("T-1") is None
+
+
+@pytest.mark.parametrize("bad", ["nan", "inf", "-inf"])
+def test_thresholds_from_env_rejects_non_finite_values(bad):
+    with pytest.raises(ValueError):
+        Thresholds.from_env({"STALL_IDLE_HOURS": bad})

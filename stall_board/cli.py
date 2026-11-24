@@ -34,7 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="pretend the clock reads this ISO 8601 time (for repeatable runs)")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("seed", help="replace all tasks with the fake demo set")
+    seed_cmd = sub.add_parser("seed", help="load the fake demo set into an empty board")
+    seed_cmd.add_argument("--force", action="store_true",
+                          help="delete every existing task and its history first")
 
     add = sub.add_parser("add", help="add a task")
     add.add_argument("id")
@@ -70,6 +72,11 @@ def run(args: argparse.Namespace, out) -> int:
 
     with Board(db_path) as board:
         if args.command == "seed":
+            existing = board.count_tasks()
+            if existing and not args.force:
+                raise BoardError(
+                    f"{db_path} already holds {existing} tasks; seed would delete them "
+                    "and their history. Pass seed --force to replace them.")
             count = seed(board, now)
             print(f"Seeded {count} fake tasks.", file=out)
             return 0

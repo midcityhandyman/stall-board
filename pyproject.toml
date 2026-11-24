@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "stall-board"
 version = "0.1.0"
@@ -8,6 +12,9 @@ dependencies = []
 
 [project.scripts]
 stall-board = "stall_board.cli:main"
+
+[tool.setuptools]
+packages = ["stall_board"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

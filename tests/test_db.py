@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import timedelta, timezone
 
 import pytest
@@ -92,3 +93,30 @@ def test_timestamp_round_trip_and_naive_input():
     assert parse_ts("2026-01-15T12:00:00") == stamp
     with pytest.raises(BoardError):
         parse_ts("yesterday")
+
+
+def test_heartbeat_resets_last_move_but_not_state_since(board, now):
+    board.add_task("T-1", "Needs a yes", state="waiting_human", waiting_on="ops lead", now=now)
+    later = now + timedelta(hours=5)
+    task = board.move_task("T-1", "waiting_human", now=later)
+    assert task.last_moved_at == later
+    assert task.state_since == now
+    task = board.move_task("T-1", "in_progress", now=later)
+    assert task.state_since == later
+
+
+def test_board_file_without_state_since_is_migrated(tmp_path):
+    path = str(tmp_path / "old.db")
+    conn = sqlite3.connect(path)
+    conn.executescript(
+        "CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, owner TEXT,"
+        " state TEXT NOT NULL, waiting_on TEXT, note TEXT, created_at TEXT NOT NULL,"
+        " last_moved_at TEXT NOT NULL);"
+        "INSERT INTO tasks VALUES ('T-1','Old row',NULL,'blocked','API down',NULL,"
+        " '2026-01-14T00:00:00Z','2026-01-15T00:00:00Z');"
+    )
+    conn.commit()
+    conn.close()
+    with Board(path) as b:
+        task = b.get_task("T-1")
+        assert task.state_since == task.last_moved_at

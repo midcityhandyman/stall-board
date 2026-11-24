@@ -7,12 +7,17 @@ Three flags exist:
   idle           the task claims to be moving (or queued) but nothing has
                  touched it for longer than the threshold
 
+Idle is timed from the last move, so a heartbeat clears it. Waiting and
+blocked are timed from when the task entered that state, so a heartbeat
+does not.
+
 Nothing here reads the database or the wall clock, so every rule can be
 tested with plain values.
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable, Mapping, Optional
@@ -48,8 +53,9 @@ class Thresholds:
                 number = float(raw)
             except ValueError as exc:
                 raise ValueError(f"{name} must be a number of hours, got {raw!r}") from exc
-            if number <= 0:
-                raise ValueError(f"{name} must be greater than zero, got {raw!r}")
+            if not math.isfinite(number) or number <= 0:
+                raise ValueError(
+                    f"{name} must be a finite number greater than zero, got {raw!r}")
             values[field] = number
         return cls(**values)
 
@@ -106,6 +112,12 @@ def age_hours(task: Task, now: datetime) -> float:
     return max(0.0, (now - task.last_moved_at).total_seconds() / 3600.0)
 
 
+def state_age_hours(task: Task, now: datetime) -> float:
+    """Hours since the task entered its current state. Heartbeats do not reset it."""
+    since = task.state_since or task.last_moved_at
+    return max(0.0, (now - since).total_seconds() / 3600.0)
+
+
 def format_age(hours: float) -> str:
     if hours < 1:
         return f"{int(hours * 60)}m"
@@ -118,11 +130,14 @@ def format_age(hours: float) -> str:
 
 def check_task(task: Task, now: datetime, limits: Thresholds) -> Optional[Finding]:
     """Return the single finding for a task, or None if it is moving fine."""
-    age = age_hours(task, now)
-    shown = format_age(age)
-
     if task.state == "done":
         return None
+
+    # Parked work is timed from when it was parked: an agent that keeps
+    # checking in must not reset how long the human has been asked.
+    parked = task.state in ("waiting_human", "blocked")
+    age = state_age_hours(task, now) if parked else age_hours(task, now)
+    shown = format_age(age)
 
     if task.state == "waiting_human":
         who = task.waiting_on or "an unnamed human"

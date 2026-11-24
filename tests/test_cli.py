@@ -81,3 +81,12 @@ def test_env_supplies_db_clock_and_thresholds(tmp_path, monkeypatch):
 
     monkeypatch.setenv("STALL_IDLE_HOURS", "banana")
     assert main(["scan"], out=io.StringIO()) == 2
+
+
+def test_seed_refuses_to_wipe_a_board_that_has_tasks(db, capsys):
+    run(db, "add", "T-1", "Real work", "--owner", "agent-a")
+    assert run(db, "seed")[0] == 2
+    assert "--force" in capsys.readouterr().err
+    assert run(db, "list")[1].startswith("T-1 ")
+    assert run(db, "seed", "--force") == (0, "Seeded 14 fake tasks.\n")
+    assert len(run(db, "list")[1].splitlines()) == 14

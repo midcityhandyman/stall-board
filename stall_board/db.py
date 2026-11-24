@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     waiting_on    TEXT,
     note          TEXT,
     created_at    TEXT NOT NULL,
-    last_moved_at TEXT NOT NULL
+    last_moved_at TEXT NOT NULL,
+    state_since   TEXT
 );
 CREATE TABLE IF NOT EXISTS moves (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +71,9 @@ class Task:
     note: Optional[str]
     created_at: datetime
     last_moved_at: datetime
+    # When the task entered its current state. A heartbeat (a move to the same
+    # state) updates last_moved_at but not this. None means "same as last move".
+    state_since: Optional[datetime] = None
 
 
 @dataclass(frozen=True)
@@ -102,7 +106,17 @@ class Board:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Add state_since to a board file created before that column existed."""
+        columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(tasks)")}
+        if "state_since" not in columns:
+            self.conn.execute("ALTER TABLE tasks ADD COLUMN state_since TEXT")
+        self.conn.execute(
+            "UPDATE tasks SET state_since = last_moved_at WHERE state_since IS NULL"
+        )
 
     def __enter__(self) -> "Board":
         return self
@@ -134,9 +148,10 @@ class Board:
             with self.conn:
                 self.conn.execute(
                     "INSERT INTO tasks (id, title, owner, state, waiting_on, note,"
-                    " created_at, last_moved_at) VALUES (?,?,?,?,?,?,?,?)",
+                    " created_at, last_moved_at, state_since)"
+                    " VALUES (?,?,?,?,?,?,?,?,?)",
                     (task_id, title.strip(), _clean(owner), state,
-                     _clean(waiting_on), _clean(note), stamp, stamp),
+                     _clean(waiting_on), _clean(note), stamp, stamp, stamp),
                 )
                 self.conn.execute(
                     "INSERT INTO moves (task_id, from_state, to_state, moved_at, note)"
@@ -159,8 +174,11 @@ class Board:
         """Change a task's state and reset its last moved time.
 
         Moving to the same state is allowed: it is how an agent says
-        "still alive, still working" (a heartbeat). waiting_on is cleared
-        unless the new state is blocked or waiting_human.
+        "still alive, still working" (a heartbeat). A heartbeat resets
+        last_moved_at but not state_since, so a task parked on a human
+        keeps its full waiting time however often its agent checks in.
+        waiting_on is cleared unless the new state is blocked or
+        waiting_human.
         """
         _check_state(state)
         current = self.get_task(task_id)
@@ -171,11 +189,15 @@ class Board:
             new_waiting = current.waiting_on
         new_owner = _clean(owner) or current.owner
         new_note = _clean(note) or current.note
+        if state == current.state:
+            since = format_ts(current.state_since or current.last_moved_at)
+        else:
+            since = stamp
         with self.conn:
             self.conn.execute(
                 "UPDATE tasks SET state=?, waiting_on=?, note=?, owner=?,"
-                " last_moved_at=? WHERE id=?",
-                (state, new_waiting, new_note, new_owner, stamp, task_id),
+                " last_moved_at=?, state_since=? WHERE id=?",
+                (state, new_waiting, new_note, new_owner, stamp, since, task_id),
             )
             self.conn.execute(
                 "INSERT INTO moves (task_id, from_state, to_state, moved_at, note)"
@@ -183,6 +205,9 @@ class Board:
                 (task_id, current.state, state, stamp, _clean(note)),
             )
         return self.get_task(task_id)
+
+    def count_tasks(self) -> int:
+        return self.conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
 
     def clear(self) -> None:
         with self.conn:
@@ -224,4 +249,5 @@ def _row_to_task(row: sqlite3.Row) -> Task:
         note=row["note"],
         created_at=parse_ts(row["created_at"]),
         last_moved_at=parse_ts(row["last_moved_at"]),
+        state_since=parse_ts(row["state_since"] or row["last_moved_at"]),
     )
